@@ -27,18 +27,27 @@ const CollabViewMiddleware = (httpServer) => {
             if (volatileActiveUsers[e.roomName] == undefined)
                 volatileActiveUsers[e.roomName] = [];
 
+            io.to(socket.id).emit('cbv-cachedActiveUsersList', volatileActiveUsers[e.roomName]);
             volatileActiveUsers[e.roomName].push({
                 uName: e.uName,
                 uId: e.uId,
                 roomName: e.roomName
             })
 
-            socket.broadcast.emit('cbv-newActiveUser', e);
-            io.to(socket.id).emit('cbv-cachedActiveUsersList', volatileActiveUsers[e.roomName]);
+            //Notify users in room about new user
+            socket.to(e.roomName).emit('cbv-newActiveUser', e);
         });
 
         socket.on('cbv-nibPosition', (e) => {
-            socket.broadcast.emit('cbv-nibPosition', e);
+            socket.to(e.roomName).emit('cbv-nibPosition', e);
+        });
+
+        socket.on('cbv-nibPress', (e) => {
+            socket.to(e.roomName).emit('cbv-nibPress', e);
+        });
+
+        socket.on('cbv-nibLift', (e) => {
+            socket.to(e.roomName).emit('cbv-nibLift', e);
         });
 
         socket.on('disconnect', (e) => {
