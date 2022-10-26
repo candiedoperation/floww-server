@@ -38,6 +38,10 @@ const CollabViewMiddleware = (httpServer) => {
             socket.to(e.roomName).emit('cbv-newActiveUser', e);
         });
 
+        socket.on('cbv-createSelection', (e) => {
+            socket.to(e.roomName).emit('cbv-createSelection', e);
+        });
+
         socket.on('cbv-nibPosition', (e) => {
             socket.to(e.roomName).emit('cbv-nibPosition', e);
         });
