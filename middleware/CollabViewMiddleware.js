@@ -7,6 +7,8 @@ const CollabViewMiddleware = (httpServer) => {
     });
 
     const volatileActiveUsers = {};
+    const volatilePollStatus = {};
+
     io.on('connection', (socket) => {
         let joinedRoom = null;
 
@@ -53,6 +55,12 @@ const CollabViewMiddleware = (httpServer) => {
         socket.on('cbv-nibLift', (e) => {
             socket.to(e.roomName).emit('cbv-nibLift', e);
         });
+
+        socket.on('cbv-comment', (e) => {
+            let currentTimestamp = new Date();
+            e.time = `${currentTimestamp.getUTCHours}:${currentTimestamp.getUTCMinutes}`;
+            socket.to(e.roomName).emit('cbv-comment', e);
+        })
 
         socket.on('disconnect', (e) => {
             console.log(`${socket.id} disconnected\n`)
