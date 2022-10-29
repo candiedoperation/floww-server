@@ -1,3 +1,5 @@
+const moment = require('moment');
+
 const CollabViewMiddleware = (httpServer) => {
     // Init. Socket.IO Server
     const io = require('socket.io')(httpServer, {
@@ -7,24 +9,18 @@ const CollabViewMiddleware = (httpServer) => {
     });
 
     const volatileActiveUsers = {};
+    const volatileWbStates = {};
     const volatilePollStatus = {};
 
     io.on('connection', (socket) => {
         let joinedRoom = null;
 
-        socket.on('cbv-joinRoom', (e) => {
-            socket.join(e.roomName);
-            joinedRoom = e.roomName;
-
-            volatileActiveUsers[e.roomName] = [];
-            volatileActiveUsers[e.roomName].push({
-
-            })
-        })
-
         socket.on('cbv-newActiveUser', (e) => {
             socket.join(e.roomName);
             joinedRoom = e.roomName;
+
+            if (volatileWbStates[e.roomName] == undefined) 
+                volatileWbStates[e.roomName] = {};
 
             if (volatileActiveUsers[e.roomName] == undefined)
                 volatileActiveUsers[e.roomName] = [];
@@ -35,6 +31,9 @@ const CollabViewMiddleware = (httpServer) => {
                 uId: e.uId,
                 roomName: e.roomName
             })
+
+            //Send Required States to new user
+            io.to(socket.id).emit('cbv-volatileStates', volatileWbStates[e.roomName]);
 
             //Notify users in room about new user
             socket.to(e.roomName).emit('cbv-newActiveUser', e);
@@ -49,16 +48,17 @@ const CollabViewMiddleware = (httpServer) => {
         });
 
         socket.on('cbv-nibPress', (e) => {
+            volatileWbStates[e.roomName].wbOverlayDisableRef = true;
             socket.to(e.roomName).emit('cbv-nibPress', e);
         });
 
         socket.on('cbv-nibLift', (e) => {
+            volatileWbStates[e.roomName].wbOverlayDisableRef = false;
             socket.to(e.roomName).emit('cbv-nibLift', e);
         });
 
         socket.on('cbv-comment', (e) => {
-            let currentTimestamp = new Date();
-            e.time = `${currentTimestamp.getUTCHours}:${currentTimestamp.getUTCMinutes}`;
+            e.time = moment().toISOString();
             socket.to(e.roomName).emit('cbv-comment', e);
         })
 
