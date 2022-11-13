@@ -1,4 +1,5 @@
 const moment = require('moment');
+const mediasoup = require("mediasoup");
 
 const CollabViewMiddleware = (httpServer) => {
     // Init. Socket.IO Server
@@ -7,6 +8,34 @@ const CollabViewMiddleware = (httpServer) => {
             origin: '*',
         }
     });
+
+    const initiateMediasoupWorker = () => {
+        const mediasoupWorkerPromise = new Promise(async (resolve, reject) => {
+            let mediasoupWorker = await mediasoup.createWorker({
+                rtcMinPort: 2000,
+                rtcMaxPort: 2020
+            });
+
+            if (mediasoupWorker) resolve(mediasoupWorker);
+        });
+
+        mediasoupWorkerPromise
+            .then((worker) => {
+                // Log Worker Information
+                console.log(`Mediasoup Worker PID: ${worker.pid}`);
+
+                // Worker Event 'Error'
+                worker.on('died', error => {
+                    console.error("Mediasoup Worker Died. Attempting Restart in 5 seconds...");
+                    setTimeout(() => {
+                        initiateMediasoupWorker();
+                    }, 5000);
+                });
+            });
+    }
+
+    // Init. SFU Server Worker
+    initiateMediasoupWorker();
 
     const volatileActiveUsers = {};
     const volatileWbStates = {};
