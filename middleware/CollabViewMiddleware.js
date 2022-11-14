@@ -9,7 +9,11 @@ const CollabViewMiddleware = (httpServer) => {
         }
     });
 
-    const initiateMediasoupWorker = () => {
+    let mediasoupWorker = null;
+    const volatileRooms = {};
+    const volatileWbStates = {};
+
+    const initializeMediasoupWorker = () => {
         const mediasoupWorkerPromise = new Promise(async (resolve, reject) => {
             let mediasoupWorker = await mediasoup.createWorker({
                 rtcMinPort: 2000,
@@ -22,24 +26,67 @@ const CollabViewMiddleware = (httpServer) => {
         mediasoupWorkerPromise
             .then((worker) => {
                 // Log Worker Information
+                mediasoupWorker = worker;
                 console.log(`Mediasoup Worker PID: ${worker.pid}`);
 
                 // Worker Event 'Error'
                 worker.on('died', error => {
                     console.error("Mediasoup Worker Died. Attempting Restart in 5 seconds...");
                     setTimeout(() => {
-                        initiateMediasoupWorker();
+                        initializeMediasoupWorker();
                     }, 5000);
                 });
             });
     }
 
-    // Init. SFU Server Worker
-    initiateMediasoupWorker();
+    const initializeMediaRouter = (callback) => {
+        const mediasoupRouterPromise = new Promise(async (resolve, reject) => {
+            if (mediasoupWorker == null) reject("Mediasoup Worker is Null.");
+            const mediaCodecs = [
+                {
+                    kind: "audio",
+                    mimeType: "audio/opus",
+                    clockRate: 48000,
+                    channels: 2
+                },
+                {
+                    kind: "video",
+                    mimeType: "video/H264",
+                    clockRate: 90000,
+                    parameters:
+                    {
+                        "packetization-mode": 1,
+                        "profile-level-id": "42e01f",
+                        "level-asymmetry-allowed": 1
+                    }
+                }
+            ];
 
-    const volatileActiveUsers = {};
-    const volatileWbStates = {};
-    const volatilePollStatus = {};
+            resolve(
+                await mediasoupWorker.createRouter({ mediaCodecs })
+            );
+        });
+
+        mediasoupRouterPromise
+            .then(callback)
+            .catch(() => {
+                console.error("Router Creation Failed. Retrying in 5 seconds");
+                setTimeout(() => {
+                    initializeMediaRouter (callback);
+                }, 5000);
+            })
+    }
+
+    const initializeWebRTCTransport = (callback) => {
+        const mediasoupWebRTCTransportPromise = new Promise(async (resolve, reject) => {
+            const wRTC_transportLayerOptions = {
+
+            }
+        })
+    }
+
+    // Init. SFU Server Worker
+    initializeMediasoupWorker();
 
     io.on('connection', (socket) => {
         let joinedRoom = null;
@@ -48,24 +95,50 @@ const CollabViewMiddleware = (httpServer) => {
             socket.join(e.roomName);
             joinedRoom = e.roomName;
 
-            if (volatileWbStates[e.roomName] == undefined) 
+            if (volatileRooms[e.roomName] == undefined)
+                volatileRooms[e.roomName] = {};
+
+            if (volatileRooms[e.roomName].vc_router == undefined) {
+                initializeMediaRouter((router) => {
+                    volatileRooms[e.roomName].vc_router = router;
+                });
+            }
+
+            if (volatileWbStates[e.roomName] == undefined)
                 volatileWbStates[e.roomName] = {};
 
-            if (volatileActiveUsers[e.roomName] == undefined)
-                volatileActiveUsers[e.roomName] = [];
+            if (volatileRooms[e.roomName].activeUsers == undefined)
+                volatileRooms[e.roomName].activeUsers = {};
 
-            io.to(socket.id).emit('cbv-cachedActiveUsersList', volatileActiveUsers[e.roomName]);
-            volatileActiveUsers[e.roomName].push({
+            let parsedActiveUsers = [];
+            Object.keys(volatileRooms[e.roomName].activeUsers).forEach((activeUser) => {
+                parsedActiveUsers.push(volatileRooms[e.roomName].activeUsers[activeUser]);
+            });
+
+            io.to(socket.id).emit('cbv-cachedActiveUsersList', parsedActiveUsers);
+            volatileRooms[e.roomName].activeUsers[e.uId] = {
                 uName: e.uName,
                 uId: e.uId,
-                roomName: e.roomName
-            })
+                vcTransport: null
+            }
 
             //Send Required States to new user
             io.to(socket.id).emit('cbv-volatileStates', volatileWbStates[e.roomName]);
 
             //Notify users in room about new user
             socket.to(e.roomName).emit('cbv-newActiveUser', e);
+        });
+
+        socket.on("cbv-vcRtpCapabilities", (e) => {
+            io.to(socket.id).emit('cbv-vcRtpCapabilities', {
+                rtpCapabilities: volatileRoomRouters[roomName].rtpCapabilities
+            })
+        });
+
+        socket.on("cbv-vcCreateWebRTCTransport", (e) => {
+            if (e.producer == true) {
+
+            }
         });
 
         socket.on('cbv-createSelection', (e) => {
@@ -92,12 +165,10 @@ const CollabViewMiddleware = (httpServer) => {
         })
 
         socket.on('disconnect', (e) => {
+            // Log disconnection
             console.log(`${socket.id} disconnected\n`)
 
-            volatileActiveUsers[joinedRoom]
-                = volatileActiveUsers[joinedRoom]
-                    .filter((activeUser) => (activeUser.uId != socket.id))
-
+            delete volatileRooms[joinedRoom].activeUsers[socket.id]
             io.in(joinedRoom).emit('cbv-delActiveUser', {
                 uId: socket.id
             });
