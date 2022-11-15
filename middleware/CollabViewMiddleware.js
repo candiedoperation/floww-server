@@ -1,4 +1,5 @@
 const moment = require('moment');
+const sUUID = require('short-unique-id');
 const mediasoup = require("mediasoup");
 
 const CollabViewMiddleware = (httpServer) => {
@@ -7,6 +8,11 @@ const CollabViewMiddleware = (httpServer) => {
         cors: {
             origin: '*',
         }
+    });
+
+    const meetingID = new sUUID({
+        length: 9,
+        dictionary: 'alphanum_lower'
     });
 
     let vcWorker = undefined;
@@ -102,7 +108,7 @@ const CollabViewMiddleware = (httpServer) => {
         // Per user room status (used to update exits)
         let joinedRoom = null;
 
-        const initializeNewFlowwRoom = (roomName) => {
+        const initializeNewFlowwRoom = (roomName, callback) => {
             volatileRooms[roomName] = {};
             volatileWbStates[roomName] = {};
             volatileRooms[roomName].activeUsers = {};
@@ -110,32 +116,32 @@ const CollabViewMiddleware = (httpServer) => {
             initializeMediaRouter((router) => {
                 console.log(`VC_ROUTER_ASSIGN: RoomID ${roomName} -> RouterID ${router.id}`);
                 volatileRooms[roomName].vcRouter = router;
-            });
-        }
-
-        const initializePreJoinListeners = () => {
-            socket.on("cbv-createRoom", (e) => {
-                
-            })
-        }
-
-        const initializeConferenceListeners = () => {
-            socket.on("cbv-vcRouterRtpCapabilities", (e) => {
-                e.callback(volatileRooms[e.roomName].vcRouter.rtpCapabilities);
-            });
-    
-            socket.on("cbv-vcProduceMedia", (e) => {
-    
+                callback("Init. Complete");
             });
         }
 
         const initializeActiveUsersListeners = () => {
-            socket.on('cbv-newActiveUser', (e) => {
+            socket.on("cbv-createRoom", (callback) => {
+                const createRoomName = () => {
+                    let roomName = meetingID;
+                    if (volatileRooms[roomName] == undefined) {
+                        initializeNewFlowwRoom(roomName, () => {
+                            callback(roomName);
+                        });
+                    } else {
+                        createRoomName ();
+                    }
+                }
+            });
+
+            socket.on('cbv-joinRoom', (e) => {
+                if (volatileRooms[e.roomName] == undefined) {
+                    e.error(`Room ${e.roomName} does not exist.`);
+                    return false;
+                }
+
                 socket.join(e.roomName);
                 joinedRoom = e.roomName;
-    
-                if (volatileRooms[e.roomName] == undefined)
-                    initializeNewFlowwRoom(e.roomName);
     
                 let parsedActiveUsers = [];
                 Object.keys(volatileRooms[e.roomName].activeUsers).forEach((activeUser) => {
@@ -169,6 +175,16 @@ const CollabViewMiddleware = (httpServer) => {
             });
         }
 
+        const initializeConferenceListeners = () => {
+            socket.on("cbv-vcRouterRtpCapabilities", (e) => {
+                e.callback(volatileRooms[e.roomName].vcRouter.rtpCapabilities);
+            });
+    
+            socket.on("cbv-vcProduceMedia", (e) => {
+    
+            });
+        }        
+
         const initializeDrawingBoardListeners = () => {
             socket.on('cbv-createSelection', (e) => {
                 socket.to(e.roomName).emit('cbv-createSelection', e);
@@ -195,6 +211,11 @@ const CollabViewMiddleware = (httpServer) => {
                 socket.to(e.roomName).emit('cbv-comment', e);
             })
         }
+
+        initializeActiveUsersListeners();
+        initializeConferenceListeners();
+        initializeDrawingBoardListeners();
+        initializeCommentsListeners();
     })
 }
 
