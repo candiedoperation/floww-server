@@ -5,6 +5,7 @@ const mediasoup = require("mediasoup");
 const CollabViewMiddleware = (httpServer) => {
     // Init. Socket.IO Server
     const io = require('socket.io')(httpServer, {
+        path: '/cbv-socket',
         cors: {
             origin: '*',
         }
@@ -123,7 +124,7 @@ const CollabViewMiddleware = (httpServer) => {
         const initializeActiveUsersListeners = () => {
             socket.on("cbv-createRoom", (callback) => {
                 const createRoomName = () => {
-                    let roomName = meetingID;
+                    let roomName = meetingID();
                     if (volatileRooms[roomName] == undefined) {
                         initializeNewFlowwRoom(roomName, () => {
                             callback(roomName);
@@ -132,11 +133,19 @@ const CollabViewMiddleware = (httpServer) => {
                         createRoomName ();
                     }
                 }
+
+                createRoomName ();
             });
+
+            socket.on('cbv-roomExists', (roomName, callback) => {
+                if (volatileRooms[roomName] == undefined)
+                    callback(false);
+                else
+                    callback(true);
+            })
 
             socket.on('cbv-joinRoom', (e) => {
                 if (volatileRooms[e.roomName] == undefined) {
-                    e.error(`Room ${e.roomName} does not exist.`);
                     return false;
                 }
 
@@ -163,15 +172,14 @@ const CollabViewMiddleware = (httpServer) => {
             });
 
             socket.on('disconnect', (e) => {
-                // Log disconnection
-                console.log(`${socket.id} disconnected\n`)
-    
-                if (volatileRooms[joinedRoom].activeUsers != undefined)
+                try {
                     delete volatileRooms[joinedRoom].activeUsers[socket.id]
-    
-                io.in(joinedRoom).emit('cbv-delActiveUser', {
-                    uId: socket.id
-                });
+                    io.in(joinedRoom).emit('cbv-delActiveUser', {
+                        uId: socket.id
+                    });
+                } catch {
+                    console.log(`CBV_PREJOIN_DISC: SOCKET_ID ${socket.id}`);
+                }
             });
         }
 
