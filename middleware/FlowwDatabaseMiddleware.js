@@ -8,22 +8,75 @@ const initializeMiddlewareAPI = (app) => {
     const jwt = require("jsonwebtoken");
     const FlowwDbUser = require('./../models/FlowwDbUser');
 
-    const SecondsOf = (duration) => {
+    const msecOf = (duration) => {
         switch (duration.charAt(duration.length - 1)) {
             case 'd':
-                return (+duration.slice(0, -1)) * 86400;
+                return (+duration.slice(0, -1)) * 86400000;
             default:
                 return undefined;
         }
+    }
+
+    const verifyJwtToken = (callback) => {
+
     }
 
     app.get('/api/status', (req, res) => {
         res.status(200).send("<h1>Floww API Middleware loaded.</h1>")
     });
 
+    app.post('/api/login', [
+        check("email", "Email is Invalid").isEmail(),
+        check("password", "Password is Invalid").isLength({ min: 8 })
+    ], async (req, res) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                errors: errors.array()
+            })
+        }
+
+        try {
+            const loginUser = await FlowwDbUser.findOne({ email: req.body.email })
+            if (!loginUser)
+                return res.status(400).json({ message: "Couldn't find your Floww Account.", status: false });
+
+            const passwordMatches = await bcrypt.compare(req.body.password, loginUser.password);
+            if (!passwordMatches)
+                return res.status(400).json({ message: "Wrong Password. <b>Forgot Password</b> helps you reset it.", status: false });
+
+            const jwtPayload = {
+                user: {
+                    id: loginUser.id,
+                    email: loginUser.email,
+                    name: loginUser.fullName
+                }
+            }
+
+            jwt.sign(
+                jwtPayload,
+                saltMiddleware.saltKey,
+                { expiresIn: '7d' },
+                (err, jwtToken) => {
+                    if (err) throw (err)
+                    res
+                        .status(200)
+                        .cookie("jwtToken", jwtToken, { httpOnly: true, maxAge: msecOf('7d').toString() })
+                        .json({ status: true })
+                }
+            )
+        } catch (err) {
+            console.log(err);
+            res.status(500).json({
+                error: err,
+                message: 'FLW_USER_LOGIN: Internal Server Error'
+            });
+        }
+    });
+
     app.post('/api/signup', [
-        check("email", false).isEmail(),
-        check("password", false).isLength({ min: 8 })
+        check("email", "Email is Invalid").isEmail(),
+        check("password", "Password shorter than 8 characters").isLength({ min: 8 })
     ], async (req, res) => {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
@@ -47,6 +100,7 @@ const initializeMiddlewareAPI = (app) => {
                 password: hash
             });
             
+            // Update database with created user...
             newUser.save();
 
             const jwtPayload = {
@@ -65,8 +119,8 @@ const initializeMiddlewareAPI = (app) => {
                     if (err) throw (err)
                     res
                      .status(200)
-                     .cookie("jwtToken", jwtToken, { httpOnly: true, maxAge: SecondsOf('7d').toString() })
-                     .redirect('/dashboard')
+                     .cookie("jwtToken", jwtToken, { httpOnly: true, maxAge: msecOf('7d').toString() })
+                     .json({ status: true })
                 }
             )
         } catch (err) {
