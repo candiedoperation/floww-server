@@ -1,12 +1,20 @@
 {
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.1",
+    "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "express": "^4.18.2",
+    "express-validator": "^6.14.2",
+    "jsonwebtoken": "^8.5.1",
     "mediasoup": "^3.11.3",
     "moment": "^2.29.4",
+    "mongoose": "^6.7.2",
     "nodemon": "^2.0.20",
     "short-unique-id": "^4.4.4",
     "socket.io": "^4.5.3"
+  },
+  "scripts": {
+    "start": "npx nodemon floww-server.js"
   }
 }

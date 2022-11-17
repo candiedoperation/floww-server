@@ -4,8 +4,11 @@ const http = require('http');
 const server = http.createServer(app);
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const cookieParser = require('cookie-parser');
 const CollabViewMiddleware = require('./middleware/CollabViewMiddleware');
+const FlowwDatabaseMiddleware = require('./middleware/FlowwDatabaseMiddleware');
 
+app.use(cookieParser());
 app.use(cors({
   origin: '*'
 }));
@@ -26,6 +29,5 @@ app.get('/', (req, res) => {
 server.listen(3001, () => {
   // Initialize Middleware
   CollabViewMiddleware(server);
-
-  console.log('floww-server:3001');
+  FlowwDatabaseMiddleware(app);
 });

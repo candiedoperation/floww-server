@@ -113,6 +113,8 @@ const CollabViewMiddleware = (httpServer) => {
             volatileRooms[roomName] = {};
             volatileWbStates[roomName] = {};
             volatileRooms[roomName].activeUsers = {};
+            volatileRooms[roomName].presenters = {};
+            // volatileRooms[roomName].presenters[socket.id] -> Here
 
             initializeMediaRouter((router) => {
                 console.log(`VC_ROUTER_ASSIGN: RoomID ${roomName} -> RouterID ${router.id}`);
