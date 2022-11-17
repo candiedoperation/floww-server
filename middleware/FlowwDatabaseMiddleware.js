@@ -25,6 +25,29 @@ const initializeMiddlewareAPI = (app) => {
         res.status(200).send("<h1>Floww API Middleware loaded.</h1>")
     });
 
+    app.post('/api/verifyauth', (req, res) => {
+        const jwtToken = req.cookies.jwtToken;
+        if (!jwtToken)
+            return res.status(401).json({ message: 'Unauthenticated', status: false });
+
+        try {
+            const decodedToken = jwt.verify(jwtToken, saltMiddleware.saltKey);
+            res.status(200).json({ ...decodedToken.public, status: true });
+            // { ...decodedToken } -> Changes may mandate for security
+        } catch (err) {
+            res.status(401).json({
+                message: 'Authentication Token is Invalid'
+            });
+        }
+    });
+
+    app.post('/api/logout', (req, res) => {
+        res
+         .status(200)
+         .cookie("jwtToken", "", { maxAge: 0 })
+         .json({ status: true })
+    })
+
     app.post('/api/login', [
         check("email", "Email is Invalid").isEmail(),
         check("password", "Password is Invalid").isLength({ min: 8 })
@@ -39,14 +62,14 @@ const initializeMiddlewareAPI = (app) => {
         try {
             const loginUser = await FlowwDbUser.findOne({ email: req.body.email })
             if (!loginUser)
-                return res.status(400).json({ message: "Couldn't find your Floww Account.", status: false });
+                return res.status(401).json({ message: "Couldn't find your Floww Account.", status: false });
 
             const passwordMatches = await bcrypt.compare(req.body.password, loginUser.password);
             if (!passwordMatches)
-                return res.status(400).json({ message: "Wrong Password. <b>Forgot Password</b> helps you reset it.", status: false });
+                return res.status(401).json({ message: "Wrong Password. <b>Forgot Password</b> helps you reset it.", status: false });
 
             const jwtPayload = {
-                user: {
+                public: {
                     id: loginUser.id,
                     email: loginUser.email,
                     name: loginUser.fullName
@@ -99,12 +122,12 @@ const initializeMiddlewareAPI = (app) => {
                 email: req.body.email,
                 password: hash
             });
-            
+
             // Update database with created user...
             newUser.save();
 
             const jwtPayload = {
-                user: {
+                public: {
                     id: newUser.id,
                     email: newUser.email,
                     name: newUser.fullName
@@ -118,9 +141,9 @@ const initializeMiddlewareAPI = (app) => {
                 (err, jwtToken) => {
                     if (err) throw (err)
                     res
-                     .status(200)
-                     .cookie("jwtToken", jwtToken, { httpOnly: true, maxAge: msecOf('7d').toString() })
-                     .json({ status: true })
+                        .status(200)
+                        .cookie("jwtToken", jwtToken, { httpOnly: true, maxAge: msecOf('7d').toString() })
+                        .json({ status: true })
                 }
             )
         } catch (err) {
@@ -136,10 +159,10 @@ const initializeMiddlewareAPI = (app) => {
 const FlowwDatabaseMiddleware = async (app) => {
     try {
         await mongoose.connect(mongoURI);
-        console.log ("Connected to Mongo Database Server");
+        console.log("Connected to Mongo Database Server");
         initializeMiddlewareAPI(app);
     } catch (e) {
-        console.log ("MongoDB Connection Failed. Exiting.");
+        console.log("MongoDB Connection Failed. Exiting.");
         throw e;
     }
 }
