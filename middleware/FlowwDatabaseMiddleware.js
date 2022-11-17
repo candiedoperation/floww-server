@@ -17,10 +17,6 @@ const initializeMiddlewareAPI = (app) => {
         }
     }
 
-    const verifyJwtToken = (callback) => {
-
-    }
-
     app.get('/api/status', (req, res) => {
         res.status(200).send("<h1>Floww API Middleware loaded.</h1>")
     });
