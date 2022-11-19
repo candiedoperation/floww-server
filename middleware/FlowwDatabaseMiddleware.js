@@ -23,6 +23,7 @@ const initializeMiddlewareAPI = (app) => {
 
     app.post('/api/verifyauth', (req, res) => {
         const jwtToken = req.cookies.jwtToken;
+        console.log(req.cookies);
         if (!jwtToken)
             return res.status(401).json({ message: 'Unauthenticated', status: false });
 
@@ -40,7 +41,7 @@ const initializeMiddlewareAPI = (app) => {
     app.post('/api/logout', (req, res) => {
         res
          .status(200)
-         .cookie("jwtToken", "", { maxAge: 0 })
+         .cookie("jwtToken", "", { httpOnly: true, maxAge: 0, secure: true, sameSite: 'none' })
          .json({ status: true })
     })
 
@@ -80,7 +81,7 @@ const initializeMiddlewareAPI = (app) => {
                     if (err) throw (err)
                     res
                         .status(200)
-                        .cookie("jwtToken", jwtToken, { httpOnly: true, maxAge: msecOf('7d').toString() })
+                        .cookie("jwtToken", jwtToken, { httpOnly: true, maxAge: msecOf('7d').toString(), secure: true, sameSite: 'none' })
                         .json({ status: true })
                 }
             )
@@ -138,7 +139,7 @@ const initializeMiddlewareAPI = (app) => {
                     if (err) throw (err)
                     res
                         .status(200)
-                        .cookie("jwtToken", jwtToken, { httpOnly: true, maxAge: msecOf('7d').toString() })
+                        .cookie("jwtToken", jwtToken, { httpOnly: true, maxAge: msecOf('7d').toString(), secure: true, sameSite: 'none' })
                         .json({ status: true })
                 }
             )
