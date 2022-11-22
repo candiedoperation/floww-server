@@ -15,6 +15,20 @@ const FlowwDbLecture = mongoose.Schema({
             required: true
         },
     },
+    detail: {
+        description: {
+            type: String,
+            required: true
+        },
+        subject: {
+            type: mongoose.Schema.Types.ObjectId, 
+            ref: 'subject'
+        },
+        topic: {
+            type: mongoose.Schema.Types.ObjectId, 
+            ref: 'topic'
+        }
+    },
     createdAt: {
         type: Date,
         default: Date.now()
