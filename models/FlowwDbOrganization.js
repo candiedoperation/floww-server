@@ -5,7 +5,7 @@ const FlowwDbOrganization = mongoose.Schema({
         type: String,
         required: true
     },
-    contact: [{
+    contact: {
         email: [{
             type: String,
             required: true
@@ -13,7 +13,7 @@ const FlowwDbOrganization = mongoose.Schema({
         tel: [{
             type: String,
         }]
-    }],
+    },
     administrators: [{
         type: mongoose.Schema.Types.ObjectId, 
         ref: 'user'

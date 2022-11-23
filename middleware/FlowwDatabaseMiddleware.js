@@ -1,5 +1,6 @@
 const { check, validationResult } = require('express-validator');
 const mongoose = require('mongoose');
+const FlowwDbOrganization = require('../models/FlowwDbOrganization');
 const mongoURI = "mongodb://localhost:27017/floww";
 
 const initializeMiddlewareAPI = (app) => {
@@ -17,18 +18,26 @@ const initializeMiddlewareAPI = (app) => {
         }
     }
 
+    const parseJwtToken = (token) => {
+        try {
+            const decodedToken = jwt.verify(token, saltMiddleware.saltKey)
+            return (decodedToken)
+        } catch (err) {
+            throw err;
+        }
+    }
+
     app.get('/api/status', (req, res) => {
         res.status(200).send("<h1>Floww API Middleware loaded.</h1>")
     });
 
     app.post('/api/verifyauth', (req, res) => {
         const jwtToken = req.cookies.jwtToken;
-        console.log(req.cookies);
         if (!jwtToken)
             return res.status(401).json({ message: 'Unauthenticated', status: false });
 
         try {
-            const decodedToken = jwt.verify(jwtToken, saltMiddleware.saltKey);
+            let decodedToken = parseJwtToken(jwtToken);
             res.status(200).json({ ...decodedToken.public, status: true });
             // { ...decodedToken } -> Changes may mandate for security
         } catch (err) {
@@ -121,36 +130,77 @@ const initializeMiddlewareAPI = (app) => {
             });
 
             // Update database with created user...
-            newUser.save();
-
-            const jwtPayload = {
-                public: {
-                    id: newUser.id,
-                    email: newUser.email,
-                    name: newUser.fullName
+            newUser.save((err, user) => {
+                if (err) throw (err)
+                const jwtPayload = {
+                    public: {
+                        id: user._id,
+                        email: user.email,
+                        name: user.fullName
+                    }
                 }
-            }
-
-            jwt.sign(
-                jwtPayload,
-                saltMiddleware.saltKey,
-                { expiresIn: '7d' },
-                (err, jwtToken) => {
-                    if (err) throw (err)
-                    res
-                        .status(200)
-                        .cookie("jwtToken", jwtToken, { httpOnly: true, maxAge: msecOf('7d').toString(), secure: true, sameSite: 'none' })
-                        .json({ status: true })
-                }
-            )
+    
+                jwt.sign(
+                    jwtPayload,
+                    saltMiddleware.saltKey,
+                    { expiresIn: '7d' },
+                    (err, jwtToken) => {
+                        if (err) throw (err)
+                        res
+                            .status(200)
+                            .cookie("jwtToken", jwtToken, { httpOnly: true, maxAge: msecOf('7d').toString(), secure: true, sameSite: 'none' })
+                            .json({ status: true })
+                    }
+                )
+            });
         } catch (err) {
-            console.log(err);
             res.status(500).json({
                 error: err,
                 message: 'FLW_USER_CREATE: Internal Server Error'
             });
         }
     });
+
+    app.post('/api/orgz/createorg', [
+        check("email", "Email is Invalid").isEmail(),
+        check("name", "Name is Invalid").notEmpty()
+    ], async (req, res) => {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({
+                errors: errors.array()
+            })
+        }
+
+        try {
+            let newOrg = await FlowwDbOrganization.findOne({ name: req.body.name });
+            if (newOrg) {
+                return res.status(400).json({ message: "There's another organization with the same name." });
+            }
+
+            const jwtToken = req.cookies.jwtToken;
+            const decodedToken = parseJwtToken(jwtToken);
+            newOrg = new FlowwDbOrganization({
+                name: req.body.name,
+                contact: { email: [req.body.email], tel: [req.body.tel] },
+                administrators: [ mongoose.Types.ObjectId(decodedToken.public.id) ]
+            })
+
+            //Save New Organization Document
+            newOrg.save((err, org) => {
+                if (err) throw (err);
+                res.status('200').json({
+                    status: true,
+                    orgData: org
+                })
+            });
+        } catch (err) {
+            return res.status(500).send({
+                error: err,
+                message: "FLW_ORG_CREATE: Internal Server Error"
+            })
+        }
+    })
 }
 
 const FlowwDatabaseMiddleware = async (app) => {
