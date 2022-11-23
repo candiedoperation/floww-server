@@ -31,7 +31,7 @@ const initializeMiddlewareAPI = (app) => {
         res.status(200).send("<h1>Floww API Middleware loaded.</h1>")
     });
 
-    app.post('/api/verifyauth', (req, res) => {
+    app.post('/api/auth/verify', (req, res) => {
         const jwtToken = req.cookies.jwtToken;
         if (!jwtToken)
             return res.status(401).json({ message: 'Unauthenticated', status: false });
@@ -47,14 +47,14 @@ const initializeMiddlewareAPI = (app) => {
         }
     });
 
-    app.post('/api/logout', (req, res) => {
+    app.post('/api/auth/logout', (req, res) => {
         res
          .status(200)
          .cookie("jwtToken", "", { httpOnly: true, maxAge: 0, secure: true, sameSite: 'none' })
          .json({ status: true })
     })
 
-    app.post('/api/login', [
+    app.post('/api/auth/login', [
         check("email", "Email is Invalid").isEmail(),
         check("password", "Password is Invalid").isLength({ min: 8 })
     ], async (req, res) => {
@@ -103,7 +103,7 @@ const initializeMiddlewareAPI = (app) => {
         }
     });
 
-    app.post('/api/signup', [
+    app.post('/api/auth/signup', [
         check("email", "Email is Invalid").isEmail(),
         check("password", "Password shorter than 8 characters").isLength({ min: 8 })
     ], async (req, res) => {
