@@ -10,7 +10,7 @@ const FlowwDatabaseMiddleware = require('./middleware/FlowwDatabaseMiddleware');
 
 app.use(cookieParser());
 app.use(cors({
-  origin: 'https://192.168.29.229:5000',
+  origin: 'https://10.0.0.71:5000',
   credentials: true,
 }));
 

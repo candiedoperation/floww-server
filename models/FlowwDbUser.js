@@ -13,6 +13,26 @@ const FlowwDbUser = mongoose.Schema({
         type: String, 
         required: true
     },
+    memberOf: {
+        organizations: [
+            {
+                type: mongoose.Types.ObjectId,
+                ref: 'organization'
+            }
+        ],
+        subOrganizations: [
+            {
+                type: mongoose.Types.ObjectId,
+                ref: 'subOrganization'
+            }
+        ],
+        classrooms: [
+            {
+                type: mongoose.Types.ObjectId,
+                ref: 'classroom'
+            }            
+        ]
+    },
     createdAt: {
         type: Date,
         default: Date.now()

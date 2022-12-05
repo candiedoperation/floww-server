@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const FlowwDbSubOrganization = mongoose.Schema({
+    parent: {
+        type: mongoose.Schema.Types.ObjectId,
+        required: true,
+        ref: 'organization'
+    },
     name: {
         type: String,
         required: true

@@ -23,7 +23,25 @@ const initializeMiddlewareAPI = (app) => {
             const decodedToken = jwt.verify(token, saltMiddleware.saltKey)
             return (decodedToken)
         } catch (err) {
+            console.log(err);
             throw err;
+        }
+    }
+
+    const isAuthorized = (req, res, next) => {
+        try {
+            res.decodedToken = parseJwtToken(req.cookies.jwtToken);
+            next();
+        } catch (err) {
+            if (err.message === 'jwt must be provided')
+                return res.status(401).json({ message: 'Unauthenticated', status: false });
+            else if (err.message === "invalid token")
+                return res.status(401).json({ message: 'Authentication Token is Invalid' });
+            else
+                res.status(500).json({
+                    error: err,
+                    message: 'FLW_VERIFY_AUTH: Internal Server Error'
+                });
         }
     }
 
@@ -49,9 +67,9 @@ const initializeMiddlewareAPI = (app) => {
 
     app.post('/api/auth/logout', (req, res) => {
         res
-         .status(200)
-         .cookie("jwtToken", "", { httpOnly: true, maxAge: 0, secure: true, sameSite: 'none' })
-         .json({ status: true })
+            .status(200)
+            .cookie("jwtToken", "", { httpOnly: true, maxAge: 0, secure: true, sameSite: 'none' })
+            .json({ status: true })
     })
 
     app.post('/api/auth/login', [
@@ -139,7 +157,7 @@ const initializeMiddlewareAPI = (app) => {
                         name: user.fullName
                     }
                 }
-    
+
                 jwt.sign(
                     jwtPayload,
                     saltMiddleware.saltKey,
@@ -161,7 +179,27 @@ const initializeMiddlewareAPI = (app) => {
         }
     });
 
-    app.post('/api/orgz/createorg', [
+    app.post('/api/orgz/deleteorg', isAuthorized, async (req, res) => {
+        try {
+            let org = await FlowwDbOrganization.findById(req.body.orgId);
+            if (!org) return res.status(404).json({ message: "Couldn't Find the Organization" })
+
+            let orgAdmins = JSON.stringify(org.administrators);
+            if (orgAdmins.indexOf(res.decodedToken.public.id) > -1) {
+                await org.remove();
+                return res.status(200).json({ status: true });
+            } else {
+                return res.status(401).json({ message: "You are not authorized to delete this organization" });
+            }
+        } catch (err) {
+            return res.status(500).send({
+                error: err,
+                message: "FLW_ORG_DELETE: Internal Server Error"
+            })
+        }
+    })
+
+    app.post('/api/orgz/createorg', isAuthorized, [
         check("email", "Email is Invalid").isEmail(),
         check("name", "Name is Invalid").notEmpty()
     ], async (req, res) => {
@@ -183,15 +221,25 @@ const initializeMiddlewareAPI = (app) => {
             newOrg = new FlowwDbOrganization({
                 name: req.body.name,
                 contact: { email: [req.body.email], tel: [req.body.tel] },
-                administrators: [ mongoose.Types.ObjectId(decodedToken.public.id) ]
+                administrators: [mongoose.Types.ObjectId(decodedToken.public.id)]
             })
 
             //Save New Organization Document
-            newOrg.save((err, org) => {
+            newOrg.save(async (err, org) => {
                 if (err) throw (err);
-                res.status('200').json({
-                    status: true,
-                    orgData: org
+
+                let loginUser = await FlowwDbUser.findById(decodedToken.public.id);
+                loginUser.memberOf.organizations.push(
+                    mongoose.Types.ObjectId(org._id)
+                )
+
+                loginUser.save((err, user) => {
+                    if (err) throw (err);
+
+                    res.status(200).json({
+                        status: true,
+                        orgData: org
+                    })
                 })
             });
         } catch (err) {
