@@ -12,6 +12,7 @@ const FlowwDbOrganization = mongoose.Schema({
         }],
         tel: [{
             type: String,
+            required: true
         }]
     },
     administrators: [{

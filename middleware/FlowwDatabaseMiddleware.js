@@ -179,6 +179,35 @@ const initializeMiddlewareAPI = (app) => {
         }
     });
 
+    app.get('/api/user/memberoforg', isAuthorized, async (req, res) => {
+        try {
+            let loginUser = 
+                await FlowwDbUser
+                 .findById(res.decodedToken.public.id)
+                 .populate({
+                    path: 'memberOf.organizations',
+                    select: 'contact _id name subOrganizations administrators',
+                    populate: {
+                        path: 'subOrganizations',
+                        model: 'organization',
+                        select: 'name'
+                    }
+                 })
+
+            if (loginUser) {
+                return res.status(200).json(loginUser.memberOf.organizations)
+            }
+            else
+                throw("Failed to Fetch organizations the user is a memberOf");
+                
+        } catch (err) {
+            return res.status(500).send({
+                error: err,
+                message: "FLW_MBR_FETCH: Internal Server Error"
+            })
+        }
+    });
+
     app.post('/api/orgz/deleteorg', isAuthorized, async (req, res) => {
         try {
             let org = await FlowwDbOrganization.findById(req.body.orgId);
@@ -216,19 +245,17 @@ const initializeMiddlewareAPI = (app) => {
                 return res.status(400).json({ message: "There's another organization with the same name." });
             }
 
-            const jwtToken = req.cookies.jwtToken;
-            const decodedToken = parseJwtToken(jwtToken);
             newOrg = new FlowwDbOrganization({
                 name: req.body.name,
-                contact: { email: [req.body.email], tel: [req.body.tel] },
-                administrators: [mongoose.Types.ObjectId(decodedToken.public.id)]
+                contact: { email: [req.body.email], tel: (req.body.tel) ? [req.body.tel] : [] },
+                administrators: [mongoose.Types.ObjectId(res.decodedToken.public.id)]
             })
 
             //Save New Organization Document
             newOrg.save(async (err, org) => {
                 if (err) throw (err);
 
-                let loginUser = await FlowwDbUser.findById(decodedToken.public.id);
+                let loginUser = await FlowwDbUser.findById(res.decodedToken.public.id);
                 loginUser.memberOf.organizations.push(
                     mongoose.Types.ObjectId(org._id)
                 )
