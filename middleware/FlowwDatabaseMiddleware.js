@@ -45,6 +45,27 @@ const initializeMiddlewareAPI = (app) => {
         }
     }
 
+    const isOrgAdmin = async (req, res, next) => {
+        try {
+            let org = await FlowwDbOrganization.findById(req.body.orgId);
+            if (!org) return res.status(404).json({ message: "Couldn't Find the Organization" })
+
+            let orgAdmins = JSON.stringify(org.administrators);
+            if (orgAdmins.indexOf(res.decodedToken.public.id) > -1) {
+                res.org = org;
+                res.orgAdmins = orgAdmins;
+                next()
+            } else {
+                return res.status(401).json({ message: "You are not authorized to delete this organization" });
+            }
+        } catch (err) {
+            return res.status(500).send({
+                error: err,
+                message: "FLW_ORG_ADMCHK: Internal Server Error"
+            })
+        }
+    }
+
     app.get('/api/status', (req, res) => {
         res.status(200).send("<h1>Floww API Middleware loaded.</h1>")
     });
@@ -181,30 +202,30 @@ const initializeMiddlewareAPI = (app) => {
 
     app.get('/api/user/memberoforg', isAuthorized, async (req, res) => {
         try {
-            let loginUser = 
+            let loginUser =
                 await FlowwDbUser
-                 .findById(res.decodedToken.public.id)
-                 .populate({
-                    path: 'memberOf.organizations',
-                    select: 'contact _id name subOrganizations administrators',
-                    populate: [{
-                        path: 'administrators',
-                        model: 'user',
-                        select: '_id fullName email'
-                    },
-                    {
-                        path: 'subOrganizations',
-                        model: 'organization',
-                        select: 'name'
-                    }]
-                 })
+                    .findById(res.decodedToken.public.id)
+                    .populate({
+                        path: 'memberOf.organizations',
+                        select: 'contact _id name subOrganizations administrators',
+                        populate: [{
+                            path: 'administrators',
+                            model: 'user',
+                            select: '_id fullName email'
+                        },
+                        {
+                            path: 'subOrganizations',
+                            model: 'organization',
+                            select: 'name'
+                        }]
+                    })
 
             if (loginUser) {
                 return res.status(200).json(loginUser.memberOf.organizations)
             }
             else
-                throw("Failed to Fetch organizations the user is a memberOf");
-                
+                throw ("Failed to Fetch organizations the user is a memberOf");
+
         } catch (err) {
             return res.status(500).send({
                 error: err,
@@ -213,24 +234,17 @@ const initializeMiddlewareAPI = (app) => {
         }
     });
 
-    app.post('/api/orgz/updatename', isAuthorized, async (req, res) => {
+    app.post('/api/orgz/updatename', isAuthorized, isOrgAdmin, async (req, res) => {
         try {
-            let org = await FlowwDbOrganization.findById(req.body.orgId);
-            if (!org) return res.status(404).json({ message: "Couldn't Find the Organization" })
+            let org = res.org;
+            req.body.name = (req.body.name) ? req.body.name : "";
+            if (req.body.name.trim() === "") return res.status(400).json({ message: "Invalid Organization Name" })
 
-            let orgAdmins = JSON.stringify(org.administrators);
-            if (orgAdmins.indexOf(res.decodedToken.public.id) > -1) {
-                req.body.name = (req.body.name) ? req.body.name : "";
-                if (req.body.name.trim() === "") return res.status(400).json({ message: "Invalid Organization Name" })
-                
-                org.name = req.body.name;
-                org.save((err, orgNew) => {
-                    if (err) throw (err);
-                    res.status(200).json({ message: 'Organization Name Updated' });
-                })
-            } else {
-                return res.status(401).json({ message: "You are not authorized to delete this organization" });
-            }
+            org.name = req.body.name;
+            org.save((err, orgNew) => {
+                if (err) throw (err);
+                res.status(200).json({ message: 'Organization Name Updated' });
+            })
         } catch (err) {
             return res.status(500).send({
                 error: err,
@@ -239,18 +253,11 @@ const initializeMiddlewareAPI = (app) => {
         }
     });
 
-    app.post('/api/orgz/deleteorg', isAuthorized, async (req, res) => {
+    app.post('/api/orgz/deleteorg', isAuthorized, isOrgAdmin, async (req, res) => {
         try {
-            let org = await FlowwDbOrganization.findById(req.body.orgId);
-            if (!org) return res.status(404).json({ message: "Couldn't Find the Organization" })
-
-            let orgAdmins = JSON.stringify(org.administrators);
-            if (orgAdmins.indexOf(res.decodedToken.public.id) > -1) {
-                await org.remove();
-                return res.status(200).json({ status: true });
-            } else {
-                return res.status(401).json({ message: "You are not authorized to delete this organization" });
-            }
+            let org = res.org;
+            await org.remove();
+            return res.status(200).json({ status: true });
         } catch (err) {
             return res.status(500).send({
                 error: err,
