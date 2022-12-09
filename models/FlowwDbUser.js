@@ -13,6 +13,15 @@ const FlowwDbUser = mongoose.Schema({
         type: String, 
         required: true
     },
+    notifications: [{
+        category: {
+            type: String,
+            required: true
+        },
+        content: {
+            type: Object
+        }
+    }],
     memberOf: {
         organizations: [
             {

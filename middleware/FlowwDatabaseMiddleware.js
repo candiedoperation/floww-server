@@ -285,6 +285,47 @@ const initializeMiddlewareAPI = (app) => {
         }
     });    
 
+    app.post('/api/orgz/inviteadmin', isAuthorized, isOrgAdmin, async (req, res) => {
+        try {
+            let org = res.org;
+            req.body.adminEmail = (req.body.adminEmail) ? req.body.adminEmail : "";
+
+            if (req.body.adminEmail.trim() === "")
+                return res.status(400).json({ message: "Invalid Admin Email" })
+            
+            let newAdmin = await FlowwDbUser.findOne({ email: req.body.adminEmail });
+            if (!newAdmin) return res.status(404).json({ message: "This Floww account does not exist" })
+
+            let newAdminNotificationId = new mongoose.Types.ObjectId();
+            newAdmin.notifications.push({
+                _id: newAdminNotificationId,
+                category: "inviteadmin",
+                content: {
+                    invitor: res.decodedToken.public,
+                    orgData: { orgId: org._id, orgName: org.name }
+                }
+            });
+
+            newAdmin.save((err, savedAdmin) => {
+                if (err) throw (err);
+                org.invitedAdministrators.push({
+                    inviteeId: savedAdmin._id,
+                    inviteId: newAdminNotificationId
+                })
+
+                org.save((err, newOrg) => {
+                    if (err) throw (err);
+                    res.status(200).json({ message: "Admin Invite Sent" })
+                })
+            })
+        } catch (err) {
+            return res.status(500).send({
+                error: err,
+                message: "FLW_ORG_INVADM: Internal Server Error"
+            })
+        }
+    });
+
     app.post('/api/orgz/addemail', isAuthorized, isOrgAdmin, async (req, res) => {
         try {
             let org = res.org;
