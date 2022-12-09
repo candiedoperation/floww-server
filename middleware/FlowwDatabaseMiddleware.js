@@ -200,6 +200,21 @@ const initializeMiddlewareAPI = (app) => {
         }
     });
 
+    app.get('/api/user/notifications', isAuthorized, async (req, res) => {
+        try {
+            let loginUser = await FlowwDbUser.findById(res.decodedToken.public.id);
+            if (!loginUser) res.status(404).json({ message: 'Authenticated User Unfound' });
+
+            //Reply with JSON
+            res.status(200).json(loginUser.notifications);
+        } catch (err) {
+            return res.status(500).send({
+                error: err,
+                message: "FLW_USR_NOTIFY: Internal Server Error"
+            })
+        }
+    });
+
     app.get('/api/user/memberoforg', isAuthorized, async (req, res) => {
         try {
             let loginUser =
