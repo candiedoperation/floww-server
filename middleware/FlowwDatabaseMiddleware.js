@@ -315,6 +315,7 @@ const initializeMiddlewareAPI = (app) => {
             
             let newAdmin = await FlowwDbUser.findOne({ email: req.body.adminEmail });
             if (!newAdmin) return res.status(404).json({ message: "This Floww account does not exist" })
+            if (org.administrators.indexOf(mongoose.Types.ObjectId(newAdmin._id)) > -1) return res.status(400).json({ message: "User is already an Admin" })
 
             let newAdminNotificationId = new mongoose.Types.ObjectId();
             newAdmin.notifications.push({
@@ -383,7 +384,28 @@ const initializeMiddlewareAPI = (app) => {
             let org = await FlowwDbOrganization.findById(req.body.orgId);
             if (!org) return res.status(404).json({ message: "Couldn't Find the Organization" })
 
+            let invitedAdminIndex = org.invitedAdministrators.map(key => key.inviteId.toString()).indexOf(req.body.inviteId);
+            if (invitedAdminIndex < 0) return res.status(404).json({ message: "Organization misses the Invite." });
+            
+            let adminInvitee = org.invitedAdministrators[invitedAdminIndex].invitee;
+            org.administrators.push(adminInvitee);
+            org.invitedAdministrators.splice(invitedAdminIndex, 1);
 
+            org.save(async (err, newOrg) => {
+                if (err) throw (err);
+                let invitedUser = await FlowwDbUser.findById(adminInvitee);
+                if (!invitedUser) return res.status(404).json({ message: "Authenticated User Unfound" });
+
+                let notificationIndex = invitedUser.notifications.map(key => key._id.toString()).indexOf(req.body.inviteId);
+                if (invitedAdminIndex < 0) return res.status(404).json({ message: "User Notification misses the Invite." });
+
+                invitedUser.notifications.splice(notificationIndex, 1);
+                invitedUser.memberOf.organizations.push(newOrg._id);
+                invitedUser.save((err, savedUser) => {
+                    if (err) throw (err);
+                    res.status(200).json({ message: "Invite Accepted" });
+                });
+            })
         } catch (err) {
             return res.status(500).send({
                 error: err,

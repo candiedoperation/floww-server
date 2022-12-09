@@ -48,4 +48,8 @@ const FlowwDbUser = mongoose.Schema({
     }
 });
 
+FlowwDbUser.post('validate', async (savedUserOperation, next) => {
+    //find a way
+})
+
 module.exports = mongoose.model("user", FlowwDbUser);
