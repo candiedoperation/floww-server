@@ -315,7 +315,8 @@ const initializeMiddlewareAPI = (app) => {
             
             let newAdmin = await FlowwDbUser.findOne({ email: req.body.adminEmail });
             if (!newAdmin) return res.status(404).json({ message: "This Floww account does not exist" })
-            if (org.administrators.indexOf(mongoose.Types.ObjectId(newAdmin._id)) > -1) return res.status(400).json({ message: "User is already an Admin" })
+            if (org.administrators.indexOf(mongoose.Types.ObjectId(newAdmin._id)) > -1) return res.status(400).json({ message: `${newAdmin.fullName} is already an Admin` })
+            if (org.invitedAdministrators.map(key => key.invitee.toString()).indexOf(newAdmin._id.toString()) > -1) return res.status(400).json({ message: `${newAdmin.fullName} is already invited` })
 
             let newAdminNotificationId = new mongoose.Types.ObjectId();
             newAdmin.notifications.push({
