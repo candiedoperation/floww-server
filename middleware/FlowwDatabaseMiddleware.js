@@ -285,6 +285,49 @@ const initializeMiddlewareAPI = (app) => {
         }
     });    
 
+    app.post('/api/orgz/addemail', isAuthorized, isOrgAdmin, async (req, res) => {
+        try {
+            let org = res.org;
+            req.body.email = (req.body.email) ? req.body.email : "";
+
+            if (req.body.email.trim() === "")
+                return res.status(400).json({ message: "Invalid Organization Email" })
+
+            org.contact.email.push(req.body.email);
+            org.save((err, orgNew) => {
+                if (err) throw (err);
+                res.status(200).json({ message: 'Organization Email Added' });
+            })
+        } catch (err) {
+            return res.status(500).send({
+                error: err,
+                message: "FLW_ORG_EMLADD: Internal Server Error"
+            })
+        }
+    });    
+
+    app.post('/api/orgz/addtel', isAuthorized, isOrgAdmin, async (req, res) => {
+        /* ADD-EMAIL API COMPLETELY REUSED. ADDED SECTION FOR FUTURE DEVELOPMENT */
+        try {
+            let org = res.org;
+            req.body.tel = (req.body.tel) ? req.body.tel : "";
+
+            if (req.body.tel.trim() === "")
+                return res.status(400).json({ message: "Invalid Organization Tel" })
+
+            org.contact.tel.push(req.body.tel);
+            org.save((err, orgNew) => {
+                if (err) throw (err);
+                res.status(200).json({ message: 'Organization Tel Added' });
+            })
+        } catch (err) {
+            return res.status(500).send({
+                error: err,
+                message: "FLW_ORG_TELDEL: Internal Server Error"
+            })
+        }
+    });      
+
     app.post('/api/orgz/deleteemail', isAuthorized, isOrgAdmin, async (req, res) => {
         try {
             let org = res.org;
