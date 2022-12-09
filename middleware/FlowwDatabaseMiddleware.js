@@ -234,6 +234,112 @@ const initializeMiddlewareAPI = (app) => {
         }
     });
 
+    app.post('/api/orgz/updateemail', isAuthorized, isOrgAdmin, async (req, res) => {
+        try {
+            let org = res.org;
+            req.body.newEmail = (req.body.newEmail) ? req.body.newEmail : "";
+            req.body.oldEmail = (req.body.oldEmail) ? req.body.oldEmail : "";
+
+            if (req.body.newEmail.trim() === "" || req.body.oldEmail.trim() === "")
+                return res.status(400).json({ message: "Invalid Organization Email" })
+
+            let oldEmailIndex = org.contact.email.indexOf(req.body.oldEmail);
+            if (oldEmailIndex < 0) throw ("Email not found");
+
+            org.contact.email[oldEmailIndex] = req.body.newEmail;
+            org.save((err, orgNew) => {
+                if (err) throw (err);
+                res.status(200).json({ message: 'Organization Email Updated' });
+            })
+        } catch (err) {
+            return res.status(500).send({
+                error: err,
+                message: "FLW_ORG_EMLUPD: Internal Server Error"
+            })
+        }
+    });
+
+    app.post('/api/orgz/updatetel', isAuthorized, isOrgAdmin, async (req, res) => {
+        /* UPDATE-EMAIL API COMPLETELY REUSED. ADDED SECTION FOR FUTURE DEVELOPMENT */
+        try {
+            let org = res.org;
+            req.body.newTel = (req.body.newTel) ? req.body.newTel : "";
+            req.body.oldTel = (req.body.oldTel) ? req.body.oldTel : "";
+
+            if (req.body.newTel.trim() === "" || req.body.oldTel.trim() === "")
+                return res.status(400).json({ message: "Invalid Organization Tel" })
+
+            let oldTelIndex = org.contact.tel.indexOf(req.body.oldTel);
+            if (oldTelIndex < 0) throw ("Tel not found");
+
+            org.contact.tel[oldTelIndex] = req.body.newTel;
+            org.save((err, orgNew) => {
+                if (err) throw (err);
+                res.status(200).json({ message: 'Organization Tel Updated' });
+            })
+        } catch (err) {
+            return res.status(500).send({
+                error: err,
+                message: "FLW_ORG_TELUPD: Internal Server Error"
+            })
+        }
+    });    
+
+    app.post('/api/orgz/deleteemail', isAuthorized, isOrgAdmin, async (req, res) => {
+        try {
+            let org = res.org;
+            req.body.email = (req.body.email) ? req.body.email : "";
+
+            if (org.contact.email.length < 2)
+                return res.status(400).json({ message: "Only Primary Email Exists" })
+
+            if (req.body.email.trim() === "")
+                return res.status(400).json({ message: "Invalid Organization Email" })
+
+            let emailIndex = org.contact.email.indexOf(req.body.email);
+            if (emailIndex < 0) throw ("Email not found");
+
+            org.contact.email.splice(emailIndex, 1);
+            org.save((err, orgNew) => {
+                if (err) throw (err);
+                res.status(200).json({ message: 'Organization Email Deleted' });
+            })
+        } catch (err) {
+            return res.status(500).send({
+                error: err,
+                message: "FLW_ORG_EMLDEL: Internal Server Error"
+            })
+        }
+    });    
+
+    app.post('/api/orgz/deletetel', isAuthorized, isOrgAdmin, async (req, res) => {
+        /* DELETE-TEL API COMPLETELY REUSED. ADDED SECTION FOR FUTURE DEVELOPMENT */
+        try {
+            let org = res.org;
+            req.body.tel = (req.body.tel) ? req.body.tel : "";
+
+            if (org.contact.tel.length < 2)
+                return res.status(400).json({ message: "Only Primary Tel Exists" })
+
+            if (req.body.tel.trim() === "")
+                return res.status(400).json({ message: "Invalid Organization Tel" })
+
+            let telIndex = org.contact.tel.indexOf(req.body.tel);
+            if (telIndex < 0) throw ("Tel not found");
+
+            org.contact.tel.splice(telIndex, 1);
+            org.save((err, orgNew) => {
+                if (err) throw (err);
+                res.status(200).json({ message: 'Organization Tel Deleted' });
+            })
+        } catch (err) {
+            return res.status(500).send({
+                error: err,
+                message: "FLW_ORG_TELDEL: Internal Server Error"
+            })
+        }
+    });        
+
     app.post('/api/orgz/updatename', isAuthorized, isOrgAdmin, async (req, res) => {
         try {
             let org = res.org;
