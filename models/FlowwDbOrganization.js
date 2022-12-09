@@ -16,7 +16,7 @@ const FlowwDbOrganization = mongoose.Schema({
         }]
     },
     invitedAdministrators: [{
-        inviteeId: {
+        invitee: {
             type: mongoose.Schema.Types.ObjectId,
             required: true,
             ref: 'user'

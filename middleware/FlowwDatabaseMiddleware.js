@@ -207,9 +207,14 @@ const initializeMiddlewareAPI = (app) => {
                     .findById(res.decodedToken.public.id)
                     .populate({
                         path: 'memberOf.organizations',
-                        select: 'contact _id name subOrganizations administrators',
+                        select: 'contact _id name subOrganizations administrators invitedAdministrators',
                         populate: [{
                             path: 'administrators',
+                            model: 'user',
+                            select: '_id fullName email'
+                        },
+                        {
+                            path: 'invitedAdministrators.invitee',
                             model: 'user',
                             select: '_id fullName email'
                         },
@@ -309,7 +314,7 @@ const initializeMiddlewareAPI = (app) => {
             newAdmin.save((err, savedAdmin) => {
                 if (err) throw (err);
                 org.invitedAdministrators.push({
-                    inviteeId: savedAdmin._id,
+                    invitee: savedAdmin._id,
                     inviteId: newAdminNotificationId
                 })
 
