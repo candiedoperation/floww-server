@@ -330,6 +330,52 @@ const initializeMiddlewareAPI = (app) => {
             })
         }
     });
+    
+    app.post('/api/orgz/inviteadminreject', isAuthorized, async (req, res) => {
+        try {
+            let org = await FlowwDbOrganization.findById(req.body.orgId);
+            if (!org) return res.status(404).json({ message: "Couldn't Find the Organization" })
+
+            let invitedAdminIndex = org.invitedAdministrators.map(key => key.inviteId.toString()).indexOf(req.body.inviteId);
+            if (invitedAdminIndex < 0) return res.status(404).json({ message: "Organization misses the Invite." });
+            let adminInvitee = org.invitedAdministrators[invitedAdminIndex].invitee;
+            
+            org.invitedAdministrators.splice(invitedAdminIndex, 1);
+            org.save(async (err, newOrg) => {
+                if (err) throw (err);
+                let invitedUser = await FlowwDbUser.findById(adminInvitee);
+                if (!invitedUser) return res.status(404).json({ message: "Authenticated User Unfound" });
+
+                let notificationIndex = invitedUser.notifications.map(key => key._id.toString()).indexOf(req.body.inviteId);
+                if (invitedAdminIndex < 0) return res.status(404).json({ message: "User Notification misses the Invite." });
+
+                invitedUser.notifications.splice(notificationIndex, 1);
+                invitedUser.save((err, savedUser) => {
+                    if (err) throw (err);
+                    res.status(200).json({ message: "Invite Rejected" });
+                });
+            })
+        } catch (err) {
+            return res.status(500).send({
+                error: err,
+                message: "FLW_ORG_RNVADM: Internal Server Error"
+            })
+        }
+    })
+
+    app.post('/api/orgz/inviteadminaccept', isAuthorized, async (req, res) => {
+        try {
+            let org = await FlowwDbOrganization.findById(req.body.orgId);
+            if (!org) return res.status(404).json({ message: "Couldn't Find the Organization" })
+
+
+        } catch (err) {
+            return res.status(500).send({
+                error: err,
+                message: "FLW_ORG_ANVADM: Internal Server Error"
+            })
+        }
+    })
 
     app.post('/api/orgz/addemail', isAuthorized, isOrgAdmin, async (req, res) => {
         try {
