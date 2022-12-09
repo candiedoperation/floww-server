@@ -323,7 +323,7 @@ const initializeMiddlewareAPI = (app) => {
         } catch (err) {
             return res.status(500).send({
                 error: err,
-                message: "FLW_ORG_TELDEL: Internal Server Error"
+                message: "FLW_ORG_TELADD: Internal Server Error"
             })
         }
     });      
