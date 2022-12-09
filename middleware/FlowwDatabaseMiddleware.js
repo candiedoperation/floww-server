@@ -59,7 +59,7 @@ const initializeMiddlewareAPI = (app) => {
                 return res.status(401).json({ message: "You are not authorized to delete this organization" });
             }
         } catch (err) {
-            return res.status(500).send({
+            return res.status(500).json({
                 error: err,
                 message: "FLW_ORG_ADMCHK: Internal Server Error"
             })
@@ -67,7 +67,7 @@ const initializeMiddlewareAPI = (app) => {
     }
 
     app.get('/api/status', (req, res) => {
-        res.status(200).send("<h1>Floww API Middleware loaded.</h1>")
+        res.status(200).json("<h1>Floww API Middleware loaded.</h1>")
     });
 
     app.post('/api/auth/verify', (req, res) => {
@@ -208,7 +208,7 @@ const initializeMiddlewareAPI = (app) => {
             //Reply with JSON
             res.status(200).json(loginUser.notifications);
         } catch (err) {
-            return res.status(500).send({
+            return res.status(500).json({
                 error: err,
                 message: "FLW_USR_NOTIFY: Internal Server Error"
             })
@@ -247,7 +247,7 @@ const initializeMiddlewareAPI = (app) => {
                 throw ("Failed to Fetch organizations the user is a memberOf");
 
         } catch (err) {
-            return res.status(500).send({
+            return res.status(500).json({
                 error: err,
                 message: "FLW_MBR_FETCH: Internal Server Error"
             })
@@ -272,7 +272,7 @@ const initializeMiddlewareAPI = (app) => {
                 res.status(200).json({ message: 'Organization Email Updated' });
             })
         } catch (err) {
-            return res.status(500).send({
+            return res.status(500).json({
                 error: err,
                 message: "FLW_ORG_EMLUPD: Internal Server Error"
             })
@@ -298,7 +298,7 @@ const initializeMiddlewareAPI = (app) => {
                 res.status(200).json({ message: 'Organization Tel Updated' });
             })
         } catch (err) {
-            return res.status(500).send({
+            return res.status(500).json({
                 error: err,
                 message: "FLW_ORG_TELUPD: Internal Server Error"
             })
@@ -340,7 +340,7 @@ const initializeMiddlewareAPI = (app) => {
                 })
             })
         } catch (err) {
-            return res.status(500).send({
+            return res.status(500).json({
                 error: err,
                 message: "FLW_ORG_INVADM: Internal Server Error"
             })
@@ -372,7 +372,7 @@ const initializeMiddlewareAPI = (app) => {
                 });
             })
         } catch (err) {
-            return res.status(500).send({
+            return res.status(500).json({
                 error: err,
                 message: "FLW_ORG_RNVADM: Internal Server Error"
             })
@@ -407,7 +407,7 @@ const initializeMiddlewareAPI = (app) => {
                 });
             })
         } catch (err) {
-            return res.status(500).send({
+            return res.status(500).json({
                 error: err,
                 message: "FLW_ORG_ANVADM: Internal Server Error"
             })
@@ -428,7 +428,7 @@ const initializeMiddlewareAPI = (app) => {
                 res.status(200).json({ message: 'Organization Email Added' });
             })
         } catch (err) {
-            return res.status(500).send({
+            return res.status(500).json({
                 error: err,
                 message: "FLW_ORG_EMLADD: Internal Server Error"
             })
@@ -450,7 +450,7 @@ const initializeMiddlewareAPI = (app) => {
                 res.status(200).json({ message: 'Organization Tel Added' });
             })
         } catch (err) {
-            return res.status(500).send({
+            return res.status(500).json({
                 error: err,
                 message: "FLW_ORG_TELADD: Internal Server Error"
             })
@@ -477,7 +477,7 @@ const initializeMiddlewareAPI = (app) => {
                 res.status(200).json({ message: 'Organization Email Deleted' });
             })
         } catch (err) {
-            return res.status(500).send({
+            return res.status(500).json({
                 error: err,
                 message: "FLW_ORG_EMLDEL: Internal Server Error"
             })
@@ -505,7 +505,7 @@ const initializeMiddlewareAPI = (app) => {
                 res.status(200).json({ message: 'Organization Tel Deleted' });
             })
         } catch (err) {
-            return res.status(500).send({
+            return res.status(500).json({
                 error: err,
                 message: "FLW_ORG_TELDEL: Internal Server Error"
             })
@@ -524,7 +524,7 @@ const initializeMiddlewareAPI = (app) => {
                 res.status(200).json({ message: 'Organization Name Updated' });
             })
         } catch (err) {
-            return res.status(500).send({
+            return res.status(500).json({
                 error: err,
                 message: "FLW_ORG_NAMUPD: Internal Server Error"
             })
@@ -537,7 +537,7 @@ const initializeMiddlewareAPI = (app) => {
             await org.remove();
             return res.status(200).json({ status: true });
         } catch (err) {
-            return res.status(500).send({
+            return res.status(500).json({
                 error: err,
                 message: "FLW_ORG_DELETE: Internal Server Error"
             })
@@ -586,7 +586,7 @@ const initializeMiddlewareAPI = (app) => {
                 })
             });
         } catch (err) {
-            return res.status(500).send({
+            return res.status(500).json({
                 error: err,
                 message: "FLW_ORG_CREATE: Internal Server Error"
             })
